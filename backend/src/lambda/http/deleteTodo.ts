@@ -20,7 +20,7 @@ export const handler: APIGatewayProxyHandler = middy(async (event: APIGatewayPro
   }
 
   return {
-    statusCode: 201,
+    statusCode: 200,
     body: JSON.stringify({
     })
   };
