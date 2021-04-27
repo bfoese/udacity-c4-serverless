@@ -228,7 +228,12 @@ To deploy an application run the following commands:
 ```
 cd backend
 npm install
+# On Windows the shortcut 'sls' conflicts with Powershell select-string command - do not use the shortcut on this platform
 sls deploy -v
+# command for Windows platform
+serverless deploy -v
+# or with predefined region and stage
+npm run deploy
 ```
 
 ## Frontend
@@ -269,3 +274,28 @@ Right click on the imported collection to set variables for the collection:
 Provide variables for the collection (similarly to how this was done in the course):
 
 ![Alt text](images/import-collection-5.png?raw=true "Image 5")
+
+# Personal Notes
+
+View Database content:
+`AWS Management Console > DynamoDB`
+
+View Logs:
+`AWS Management Console > CloudWatch > Logs > LogGroups`
+
+Delete serverless stack:
+(requires to first delete the deployment bucket that was created by CloudFormation under S3)
+`AWS Management Console > CloudFormation > Stacks`
+
+Debug API Gateway: This is great to identify the real issue behind 403 errors.
+The Frontend will receive `403 Unauthorized` errors when the Lambdas lack
+required permissions. Running the tests in the API Gateway UI will reveal Logs
+which actually tell which Permissions are missing.
+
+`AWS Management Console > API Gateway > APIs`
+
+- select an Endpoint and click on `Test`
+- provide the Authorization header that was obtained with the Frontend
+- provide path params and body if necessary
+- hit `Test`
+- check the Log messages that appear on the same page

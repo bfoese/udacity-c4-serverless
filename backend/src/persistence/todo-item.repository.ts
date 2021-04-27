@@ -1,34 +1,31 @@
 import * as AWS from 'aws-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import * as AWSXRay from 'aws-xray-sdk'
+import { createUpdateExpr, UpdateExpressionData } from '../auth/utils'
 import { AppConfig } from '../config/app.config'
 import { TodoItem } from '../models/TodoItem'
 import { TodoUpdate } from '../models/TodoUpdate'
 
 const XAWS = AWSXRay.captureAWS(AWS)
 
-
 export class TodoItemRepository {
 
   public constructor(
     private readonly docClient: DocumentClient = createDynamoDBClient(),
-    private readonly todoItemTable = AppConfig.todoItemTable,
-    private readonly todoIdIndex = AppConfig.todoIdIndex) {
+    private readonly todoItemTable = AppConfig.todoItemTable) {
   }
 
-  public async getTodoItem(todoId: string): Promise<TodoItem | null> {
-    const result = await this.docClient.query({
+  public async getTodoItem(userId: string, todoId: string): Promise<TodoItem | undefined> {
+    const result = await this.docClient.get({
       TableName: this.todoItemTable,
-      IndexName : this.todoIdIndex,
-      KeyConditionExpression: 'todoId = :todoId',
-      ExpressionAttributeValues: {
-        ':todoId': todoId
+      Key: {
+        todoId: todoId,
+        userId: userId
       },
     }).promise();
 
-    return result && result.Count === 1 ? (result.Items[0] as TodoItem) : null;
+    return result && result.Item ? (result.Item) as TodoItem : undefined;
   }
-
 
   public async getAllTodoItems(userId: string): Promise<TodoItem[]> {
     const result = await this.docClient.query({
@@ -53,7 +50,7 @@ export class TodoItemRepository {
   }
 
   public async updateTodoItem(userId: string, todoId: string, patchData: TodoUpdate): Promise<void> {
-    console.log('start patch', userId, todoId, patchData);
+    const updateExprData: UpdateExpressionData  = createUpdateExpr(patchData);
 
     await this.docClient.update({
       TableName: this.todoItemTable,
@@ -61,15 +58,9 @@ export class TodoItemRepository {
         todoId: todoId,
         userId: userId
       },
-      UpdateExpression: 'set #nameKey = :nameVal, dueDate = :dueDate, done = :done',
-      ExpressionAttributeNames: {
-        '#nameKey': 'name'
-      },
-      ExpressionAttributeValues: {
-        ':nameVal': patchData.name,
-        ':dueDate': patchData.dueDate,
-        ':done': patchData.done
-      }
+      UpdateExpression: updateExprData.updateExpr,
+      ExpressionAttributeValues: updateExprData.attrValues,
+      ExpressionAttributeNames: updateExprData.attrNames
     }).promise();
   }
 

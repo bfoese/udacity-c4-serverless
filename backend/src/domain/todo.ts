@@ -1,17 +1,21 @@
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import * as uuid from 'uuid';
+
 import { TodoItem } from '../models/TodoItem';
+import TodoAttachmentRepository from '../persistence/todo-attachment.repository';
 import { TodoItemRepository } from '../persistence/todo-item.repository';
 import { CreateTodoRequest } from '../requests/CreateTodoRequest';
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest';
 
 const todoItemRepository = new TodoItemRepository();
+const todoAttachmentRepository = new TodoAttachmentRepository();
 
 export async function getAllTodoItems(userId: string): Promise<TodoItem[]> {
   return todoItemRepository.getAllTodoItems(userId);
 }
 
-export async function getTodoItem(todoId: string): Promise<TodoItem> {
-  return todoItemRepository.getTodoItem(todoId);
+export async function getTodoItem(todoId: string,userId: string): Promise<TodoItem> {
+  return todoItemRepository.getTodoItem(userId, todoId)
 }
 
 export async function createTodo(
@@ -27,8 +31,9 @@ export async function createTodo(
     name: createTodoRequest.name,
     createdAt: new Date().toISOString(),
     dueDate: createTodoRequest.dueDate,
+    attachmentUrl: todoAttachmentRepository.getAttachmentUrl(itemId),
     done: false,
-  })
+  });
 }
 
 export async function updateTodo(
@@ -60,6 +65,10 @@ export async function validateTodoItemBelongsToUser(
   userId: string
 ): Promise<boolean> {
 
-  const todoItem = await getTodoItem(todoId);
+  const todoItem = await getTodoItem(todoId, userId);
   return todoItem && todoItem.userId && todoItem.userId === userId;
+}
+
+export async function generateAttachmentUploadUrl(event: APIGatewayProxyEvent) {
+  return todoAttachmentRepository.generateAttachmentUploadUrl(event.pathParameters.todoId);
 }
